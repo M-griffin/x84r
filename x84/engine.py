@@ -2,7 +2,7 @@
 """
 Command-line launcher and Async Connection loop for x/84r.
 The system waits for Connections Events and spawns unique session instances
-Keeping them selves alive with Events and Callbacks.  No Threads per session instance
+Keeping themselves alive with Events and Callbacks.  No Threads per session instance
 and no blocking i/o or loops.  All receives data is state tracked and pushed through to the
 Interface or script then returns right away for next event.
 
@@ -43,14 +43,13 @@ MAX_READ_BYTES = 2 ** 16
 
 class TTSHandler(logging.Handler):
     """
-    Only Available in Posix is seems !!  Audible speaking logs!
+    Only Available in Posix it seems !!  Audible speaking logs!
     """
     def emit(self, record):
         msg = self.format(record)
         # Speak slowly in a female English voice
         cmd = ['espeak', '-s150', '-ven+f3', msg]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         # wait for the program to finish
         p.communicate()
 
@@ -156,7 +155,7 @@ class Acceptor(object):
         else:
             logging.error('Errors during accept callback')
 
-        # Loop back to setup callback event for accepting the next connection
+        # Loop back to set up callback event for accepting the next connection
         self.__async_socket.asyncAccept(self.__accept_callback)
 
 
@@ -173,8 +172,9 @@ def main() -> int:
     logging.info('io_service = ' + str(io_service))
 
     # Setup Acceptor to listen for new telnet connections and spawn sessions '''
-    Acceptor(io_service, local_address='0', local_port=6023)
+    Acceptor(io_service, local_address='127.0.0.1', local_port=6023)
 
+    logging.info('starting service = ' + str(io_service))
     io_service.run()
 
     logging.info('shutdown complete')

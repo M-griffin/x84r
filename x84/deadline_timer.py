@@ -11,14 +11,14 @@ Michael Griffin
 
 class DeadLineTimer(object):
     """
-    DeadLine timer to mimic boost ASIO is simplistic way
-    For import and telnet negotiations we need a trmer to let us know
+    DeadLine timer to mimic boost ASIO is a simplistic way
+    For import and telnet negotiations we need a timer to let us know
     when were done without blocking.
     """
     def __new__(cls):
         """
-        Each Connection will have it's own unique instance created
-        :param connection:
+        Each Connection will have its own unique instance created
+        :param cls:
         :return:
         """
         inst = object.__new__(cls)
@@ -46,7 +46,7 @@ class DeadLineTimer(object):
 
 class BackgroundTimer(Thread):
     """
-    Background thread with Callback that executes after the interval
+    Background thread with Callback that executes after the interval.
     interval = time to wait before executing callback method
     callback = execute callback once interval completes
     """
@@ -71,7 +71,7 @@ class BackgroundTimer(Thread):
 
 class BackgroundTask(Thread):
     """
-    Background thread with Callback that executes after the interval
+    Background thread with Callback that executes after the interval.
     interval = time to wait before executing callback method
     reference = reference to class or method to execute before callback
                 also passed the interval to exit when it's cycles are completed.

@@ -298,6 +298,7 @@ class AsyncIOService(object):
     """
     Service used to poll asynchronous sockets.
     """
+
     def __init__(self):
         self.__fdToAsyncSocket = {}
         self.__fdsRegisteredForRead = set()

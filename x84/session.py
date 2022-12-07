@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Async Session engine for x/84.
-Each connections generates it's own session instance
+Each connection generates its own session instance
 Async Reads Events keeps the session and instance alive with callbacks
 
 Data is parsed into a read buffers, parsed through TelnetOptionParsing then pushed
@@ -87,7 +87,7 @@ class ClientSession(object):
 
     def __new__(cls, connection):
         """
-        Each Connection will have it's own unique instance created
+        Each Connection will have its own unique instance created
         :param connection:
         :return:
         """
@@ -179,7 +179,7 @@ class ClientSession(object):
                     # bytes_parsed = bytes_parsed + return_byte
                     self.receive_buffer.append(return_byte)
 
-            # Data other then Telnet Options, then send back to client. or push through system!!
+            # Data other than Telnet Options, then send back to client. or push through system!!
             if len(self.receive_buffer) > 0:
                 # TODO this should now be pushed through for input on the STATE.
                 self.async_write(b''.join(self.receive_buffer))
