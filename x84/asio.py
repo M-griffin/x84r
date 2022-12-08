@@ -4,8 +4,8 @@ import functools
 import select
 import socket
 
-'''Asynchronous socket service inspired by the basic design of Boost ASIO.
-
+"""
+Asynchronous socket service inspired by the basic design of Boost ASIO.
 This service currently supports TCP sockets only, and supports asynchronous
 versions of common client operations (connect, read, write) and server operations 
 (accept).
@@ -13,11 +13,19 @@ versions of common client operations (connect, read, write) and server operation
 This implementation supports the use of select, poll, epoll, or kqueue as the
 underlying poll system call.
 
-Aaron Riekenberg
-aaron.riekenberg@gmail.com
-
+Aaron Riekenberg - aaron.riekenberg@gmail.com
 MIT licence.
-'''
+
+Refactoring and SonarLint Updates
+Michael Griffin - mrmisticismo@hotmail.com
+"""
+
+# Handle Constants For Exception Messages
+ASYNC_SOCKET_CLOSED_MSG = "AsyncSocket closed"
+ASYNC_ACCEPT_IN_PROGRESS_MSG = "Accept already in progress"
+ASYNC_CONNECT_IN_PROGRESS_MSG = "Connect already in progress"
+ASYNC_READ_IN_PROGRESS_MSG = "Read already in progress"
+ASYNC_WRITE_IN_PROGRESS_MSG = "Write all already in progress"
 
 
 class AsyncException(Exception):
@@ -31,44 +39,44 @@ class AsyncException(Exception):
 
 
 class AsyncSocket(object):
-    '''Socket class supporting asynchronous operations.'''
+    """Socket class supporting asynchronous operations."""
 
-    def __init__(self, asyncIOService, sock=None):
+    def __init__(self, async_io_service, sock=None):
         super(AsyncSocket, self).__init__()
-        self.__asyncIOService = asyncIOService
-        self.__acceptCallback = None
-        self.__connectCallback = None
-        self.__readCallback = None
-        self.__writeAllCallback = None
-        self.__writeBuffer = b''
-        self.__maxReadBytes = 0
+        self.__async_io_service = async_io_service
+        self.__accept_callback = None
+        self.__connect_callback = None
+        self.__read_callback = None
+        self.__write_all_callback = None
+        self.__write_buffer = b''
+        self.__max_read_bytes = 0
         self.__closed = False
         if sock:
             self.__socket = sock
         else:
             self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.__socket.setblocking(0)
-        asyncIOService.addAsyncSocket(self)
+        self.__socket.setblocking(False)
+        async_io_service.add_async_socket(self)
 
     def __str__(self):
-        return 'AsyncSocket [ fileno = %d ]' % self.fileno()
+        return "AsyncSocket [ fileno = %d ]" % self.get_fileno()
 
-    def getsockname(self):
+    def get_socket_name(self):
         return self.__socket.getsockname()
 
-    def getpeername(self):
+    def get_peer_name(self):
         return self.__socket.getpeername()
 
     def closed(self):
         return self.__closed
 
-    def getSocket(self):
+    def get_socket(self):
         return self.__socket
 
-    def fileno(self):
+    def get_fileno(self):
         return self.__socket.fileno()
 
-    def setReuseAddress(self):
+    def set_reuse_address(self):
         self.__socket.setsockopt(
             socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -78,220 +86,209 @@ class AsyncSocket(object):
     def bind(self, addr):
         self.__socket.bind(addr)
 
-    def asyncConnect(self, address, callback):
-        if self.__acceptCallback:
-            raise AsyncException('Accept already in progress')
-        if self.__connectCallback:
-            raise AsyncException('Connect already in progress')
-        if self.__readCallback:
-            raise AsyncException('Read already in progress')
-        if self.__writeAllCallback:
-            raise AsyncException('Write all already in progress')
+    def async_connect(self, address, callback):
+        if self.__accept_callback:
+            raise AsyncException(ASYNC_ACCEPT_IN_PROGRESS_MSG)
+        if self.__connect_callback:
+            raise AsyncException(ASYNC_CONNECT_IN_PROGRESS_MSG)
+        if self.__read_callback:
+            raise AsyncException(ASYNC_READ_IN_PROGRESS_MSG)
+        if self.__write_all_callback:
+            raise AsyncException(ASYNC_WRITE_IN_PROGRESS_MSG)
         if self.__closed:
-            raise AsyncException('AsyncSocket closed')
+            raise AsyncException(ASYNC_SOCKET_CLOSED_MSG)
 
         err = self.__socket.connect_ex(address)
         if err in (errno.EINPROGRESS, errno.EWOULDBLOCK):
-            self.__connectCallback = callback
-            self.__asyncIOService.registerAsyncSocketForWrite(self)
+            self.__connect_callback = callback
+            self.__async_io_service.register_async_socket_for_write(self)
         else:
-            self.__asyncIOService.invokeLater(
-                functools.partial(callback, err=err))
+            self.__async_io_service.register_callback_event(functools.partial(callback, err=err))
 
-    def asyncAccept(self, callback):
-        if self.__acceptCallback:
-            raise AsyncException('Accept already in progress')
-        if self.__connectCallback:
-            raise AsyncException('Connect already in progress')
-        if self.__readCallback:
-            raise AsyncException('Read already in progress')
-        if self.__writeAllCallback:
-            raise AsyncException('Write all already in progress')
+    def async_accept(self, callback):
+        if self.__accept_callback:
+            raise AsyncException(ASYNC_ACCEPT_IN_PROGRESS_MSG)
+        if self.__connect_callback:
+            raise AsyncException(ASYNC_CONNECT_IN_PROGRESS_MSG)
+        if self.__read_callback:
+            raise AsyncException(ASYNC_READ_IN_PROGRESS_MSG)
+        if self.__write_all_callback:
+            raise AsyncException(ASYNC_WRITE_IN_PROGRESS_MSG)
         if self.__closed:
-            raise AsyncException('AsyncSocket closed')
+            raise AsyncException(ASYNC_SOCKET_CLOSED_MSG)
 
         try:
-            (newSocket, addr) = self.__socket.accept()
-            asyncSocket = AsyncSocket(self.__asyncIOService, newSocket)
-            self.__asyncIOService.invokeLater(
-                functools.partial(callback, sock=asyncSocket, err=0))
+            (new_socket, addr) = self.__socket.accept()
+            accept_socket = AsyncSocket(self.__async_io_service, new_socket)
+            self.__async_io_service.register_callback_event(functools.partial(callback, sock=accept_socket, err=0))
         except socket.error as e:
             if e.args[0] in (errno.EAGAIN, errno.EWOULDBLOCK):
-                self.__acceptCallback = callback
-                self.__asyncIOService.registerAsyncSocketForRead(self)
+                self.__accept_callback = callback
+                self.__async_io_service.register_async_socket_for_read(self)
             else:
-                self.__asyncIOService.invokeLater(
-                    functools.partial(callback, sock=None, err=e.args[0]))
+                self.__async_io_service.register_callback_event(functools.partial(callback, sock=None, err=e.args[0]))
 
-    def asyncRead(self, maxBytes, callback):
-        if self.__acceptCallback:
-            raise AsyncException('Accept already in progress')
-        if self.__connectCallback:
-            raise AsyncException('Connect already in progress')
-        if self.__readCallback:
-            raise AsyncException('Read already in progress')
+    def async_read(self, max_bytes, callback):
+        if self.__accept_callback:
+            raise AsyncException(ASYNC_ACCEPT_IN_PROGRESS_MSG)
+        if self.__connect_callback:
+            raise AsyncException(ASYNC_CONNECT_IN_PROGRESS_MSG)
+        if self.__read_callback:
+            raise AsyncException(ASYNC_READ_IN_PROGRESS_MSG)
         if self.__closed:
-            raise AsyncException('AsyncSocket closed')
+            raise AsyncException(ASYNC_SOCKET_CLOSED_MSG)
 
-        self.__maxReadBytes = maxBytes
+        self.__max_read_bytes = max_bytes
+        data = None
+
         try:
-            data = self.__socket.recv(self.__maxReadBytes)
-            self.__asyncIOService.invokeLater(
-                functools.partial(callback, data=data, err=0))
+            data = self.__socket.recv(self.__max_read_bytes)
+            self.__async_io_service.register_callback_event(functools.partial(callback, data=data, err=0))
         except socket.error as e:
             if e.args[0] in (errno.EAGAIN, errno.EWOULDBLOCK):
-                self.__readCallback = callback
-                self.__asyncIOService.registerAsyncSocketForRead(self)
+                self.__read_callback = callback
+                self.__async_io_service.register_async_socket_for_read(self)
             else:
-                self.__asyncIOService.invokeLater(
-                    functools.partial(callback, data=data, err=e.args[0]))
+                self.__async_io_service.register_callback_event(functools.partial(callback, data=data, err=e.args[0]))
 
-    def asyncWriteAll(self, data, callback):
-        if self.__acceptCallback:
-            raise AsyncException('Accept already in progress')
-        if self.__connectCallback:
-            raise AsyncException('Connect already in progress')
-        if self.__writeAllCallback:
-            raise AsyncException('Write all already in progress')
+    def async_write_all(self, data, callback):
+        if self.__accept_callback:
+            raise AsyncException(ASYNC_ACCEPT_IN_PROGRESS_MSG)
+        if self.__connect_callback:
+            raise AsyncException(ASYNC_CONNECT_IN_PROGRESS_MSG)
+        if self.__write_all_callback:
+            raise AsyncException(ASYNC_WRITE_IN_PROGRESS_MSG)
         if self.__closed:
-            raise AsyncException('AsyncSocket closed')
+            raise AsyncException(ASYNC_CONNECT_IN_PROGRESS_MSG)
 
-        self.__writeBuffer += data
-        writeWouldBlock = False
+        self.__write_buffer += data
+        use_write_block = False
         try:
-            bytesSent = self.__socket.send(self.__writeBuffer)
-            self.__writeBuffer = self.__writeBuffer[bytesSent:]
-            if len(self.__writeBuffer) == 0:
-                self.__asyncIOService.invokeLater(
-                    functools.partial(callback, err=0))
+            bytes_sent = self.__socket.send(self.__write_buffer)
+            self.__write_buffer = self.__write_buffer[bytes_sent:]
+            if len(self.__write_buffer) == 0:
+                self.__async_io_service.register_callback_event(functools.partial(callback, err=0))
             else:
-                writeWouldBlock = True
+                use_write_block = True
         except socket.error as e:
             if e.args[0] in (errno.EAGAIN, errno.EWOULDBLOCK):
-                writeWouldBlock = True
+                use_write_block = True
             else:
-                self.__asyncIOService.invokeLater(
-                    functools.partial(callback, err=e.args[0]))
+                self.__async_io_service.register_callback_event(functools.partial(callback, err=e.args[0]))
 
-        if writeWouldBlock:
-            self.__writeAllCallback = callback
-            self.__asyncIOService.registerAsyncSocketForWrite(self)
+        if use_write_block:
+            self.__write_all_callback = callback
+            self.__async_io_service.register_async_socket_for_write(self)
 
     def close(self):
         if self.__closed:
             return
 
-        self.__asyncIOService.removeAsyncSocket(self)
+        self.__async_io_service.remove_async_socket(self)
         self.__socket.close()
         self.__closed = True
 
-        if self.__acceptCallback:
-            self.__asyncIOService.invokeLater(
-                functools.partial(self.__acceptCallback, sock=None, err=errno.EBADF))
-            self.__acceptCallback = None
+        if self.__accept_callback:
+            self.__async_io_service.register_callback_event(
+                functools.partial(self.__accept_callback, sock=None, err=errno.EBADF))
+            self.__accept_callback = None
 
-        if self.__connectCallback:
-            self.__asyncIOService.invokeLater(
-                functools.partial(self.__connectCallback, err=errno.EBADF))
-            self.__connectCallback = None
+        if self.__connect_callback:
+            self.__async_io_service.register_callback_event(functools.partial(self.__connect_callback, err=errno.EBADF))
+            self.__connect_callback = None
 
-        if self.__readCallback:
-            self.__asyncIOService.invokeLater(
-                functools.partial(self.__readCallback, data=None, err=errno.EBADF))
-            self.__readCallback = None
+        if self.__read_callback:
+            self.__async_io_service.register_callback_event(
+                functools.partial(self.__read_callback, data=None, err=errno.EBADF))
+            self.__read_callback = None
 
-        if self.__writeAllCallback:
-            self.__asyncIOService.invokeLater(
-                functools.partial(self.__writeAllCallback, err=errno.EBADF))
-            self.__writeAllCallback = None
+        if self.__write_all_callback:
+            self.__async_io_service.register_callback_event(
+                functools.partial(self.__write_all_callback, err=errno.EBADF))
+            self.__write_all_callback = None
 
-    def handleError(self):
+    def handle_errors(self):
         err = self.__socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
 
-        if self.__connectCallback:
-            self.__asyncIOService.unregisterAsyncSocketForWrite(self)
-            self.__asyncIOService.invokeLater(
-                functools.partial(self.__connectCallback, err=err))
-            self.__connectCallback = None
+        if self.__connect_callback:
+            self.__async_io_service.unregister_async_socket_for_write(self)
+            self.__async_io_service.register_callback_event(functools.partial(self.__connect_callback, err=err))
+            self.__connect_callback = None
 
-        if self.__acceptCallback:
-            self.__asyncIOService.unregisterAsyncSocketForRead(self)
-            self.__asyncIOService.invokeLater(
-                functools.partial(self.__acceptCallback, sock=None, err=err))
-            self.__acceptCallback = None
+        if self.__accept_callback:
+            self.__async_io_service.unregister_async_socket_for_read(self)
+            self.__async_io_service.register_callback_event(
+                functools.partial(self.__accept_callback, sock=None, err=err))
+            self.__accept_callback = None
 
-        if self.__readCallback:
-            self.__asyncIOService.unregisterAsyncSocketForRead(self)
-            self.__asyncIOService.invokeLater(
-                functools.partial(self.__readCallback, data=None, err=err))
-            self.__readCallback = None
+        if self.__read_callback:
+            self.__async_io_service.unregister_async_socket_for_read(self)
+            self.__async_io_service.register_callback_event(functools.partial(self.__read_callback, data=None, err=err))
+            self.__read_callback = None
 
-        if self.__writeAllCallback:
-            self.__asyncIOService.unregisterAsyncSocketForWrite(self)
-            self.__asyncIOService.invokeLater(
-                functools.partial(self.__writeAllCallback, err=err))
-            self.__writeAllCallback = None
+        if self.__write_all_callback:
+            self.__async_io_service.unregister_async_socket_for_write(self)
+            self.__async_io_service.register_callback_event(functools.partial(self.__write_all_callback, err=err))
+            self.__write_all_callback = None
 
-    def handleRead(self):
-        if self.__acceptCallback:
+    def handle_read(self):
+        if self.__accept_callback:
             try:
-                (newSocket, addr) = self.__socket.accept()
-                asyncSocket = AsyncSocket(self.__asyncIOService, newSocket)
-                self.__asyncIOService.unregisterAsyncSocketForRead(self)
-                self.__asyncIOService.invokeLater(
-                    functools.partial(self.__acceptCallback, sock=asyncSocket, err=0))
-                self.__acceptCallback = None
+                (new_socket, addr) = self.__socket.accept()
+                read_socket = AsyncSocket(self.__async_io_service, new_socket)
+                self.__async_io_service.unregister_async_socket_for_read(self)
+                self.__async_io_service.register_callback_event(
+                    functools.partial(self.__accept_callback, sock=read_socket, err=0))
+                self.__accept_callback = None
             except socket.error as e:
                 if e.args[0] in (errno.EAGAIN, errno.EWOULDBLOCK):
                     pass
                 else:
-                    self.__asyncIOService.unregisterAsyncSocketForRead(self)
-                    self.__asyncIOService.invokeLater(
-                        functools.partial(self.__acceptCallback, sock=None, err=e.args[0]))
-                    self.__acceptCallback = None
+                    self.__async_io_service.unregister_async_socket_for_read(self)
+                    self.__async_io_service.register_callback_event(
+                        functools.partial(self.__accept_callback, sock=None, err=e.args[0]))
+                    self.__accept_callback = None
 
-        if self.__readCallback:
+        if self.__read_callback:
             try:
-                data = self.__socket.recv(self.__maxReadBytes)
-                self.__asyncIOService.unregisterAsyncSocketForRead(self)
-                self.__asyncIOService.invokeLater(
-                    functools.partial(self.__readCallback, data=data, err=0))
-                self.__readCallback = None
+                data = self.__socket.recv(self.__max_read_bytes)
+                self.__async_io_service.unregister_async_socket_for_read(self)
+                self.__async_io_service.register_callback_event(
+                    functools.partial(self.__read_callback, data=data, err=0))
+                self.__read_callback = None
             except socket.error as e:
                 if e.args[0] in (errno.EAGAIN, errno.EWOULDBLOCK):
                     pass
                 else:
-                    self.__asyncIOService.unregisterAsyncSocketForRead(self)
-                    self.__asyncIOService.invokeLater(
-                        functools.partial(self.__readCallback, data=None, err=e.args[0]))
-                    self.__readCallback = None
+                    self.__async_io_service.unregister_async_socket_for_read(self)
+                    self.__async_io_service.register_callback_event(
+                        functools.partial(self.__read_callback, data=None, err=e.args[0]))
+                    self.__read_callback = None
 
-    def handleWrite(self):
-        if self.__connectCallback:
+    def handle_write(self):
+        if self.__connect_callback:
             err = self.__socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
             if err not in (errno.EINPROGRESS, errno.EWOULDBLOCK):
-                self.__asyncIOService.unregisterAsyncSocketForWrite(self)
-                self.__asyncIOService.invokeLater(
-                    functools.partial(self.__connectCallback, err=err))
-                self.__connectCallback = None
+                self.__async_io_service.unregister_async_socket_for_write(self)
+                self.__async_io_service.register_callback_event(functools.partial(self.__connect_callback, err=err))
+                self.__connect_callback = None
 
-        if self.__writeAllCallback:
+        if self.__write_all_callback:
             try:
-                bytesSent = self.__socket.send(self.__writeBuffer)
-                self.__writeBuffer = self.__writeBuffer[bytesSent:]
-                if len(self.__writeBuffer) == 0:
-                    self.__asyncIOService.unregisterAsyncSocketForWrite(self)
-                    self.__asyncIOService.invokeLater(
-                        functools.partial(self.__writeAllCallback, err=0))
-                    self.__writeAllCallback = None
+                bytes_sent = self.__socket.send(self.__write_buffer)
+                self.__write_buffer = self.__write_buffer[bytes_sent:]
+                if len(self.__write_buffer) == 0:
+                    self.__async_io_service.unregister_async_socket_for_write(self)
+                    self.__async_io_service.register_callback_event(functools.partial(self.__write_all_callback, err=0))
+                    self.__write_all_callback = None
             except socket.error as e:
                 if e.args[0] in (errno.EAGAIN, errno.EWOULDBLOCK):
                     pass
                 else:
-                    self.__asyncIOService.unregisterAsyncSocketForWrite(self)
-                    self.__asyncIOService.invokeLater(
-                        functools.partial(self.__writeAllCallback, err=e.args[0]))
-                    self.__writeAllCallback = None
+                    self.__async_io_service.unregister_async_socket_for_write(self)
+                    self.__async_io_service.register_callback_event(
+                        functools.partial(self.__write_all_callback, err=e.args[0]))
+                    self.__write_all_callback = None
 
 
 class AsyncIOService(object):
@@ -300,122 +297,122 @@ class AsyncIOService(object):
     """
 
     def __init__(self):
-        self.__fdToAsyncSocket = {}
-        self.__fdsRegisteredForRead = set()
-        self.__fdsRegisteredForWrite = set()
-        self.__eventQueue = collections.deque()
+        self.__fd_to_async_socket = {}
+        self.__fds_registered_for_read = set()
+        self.__fds_registered_for_write = set()
+        self.__event_queue = collections.deque()
 
-    def createAsyncSocket(self):
-        return AsyncSocket(asyncIOService=self)
+    def create_async_socket(self):
+        return AsyncSocket(async_io_service=self)
 
-    def addAsyncSocket(self, asyncSocket):
-        self.__fdToAsyncSocket[asyncSocket.fileno()] = asyncSocket
+    def add_async_socket(self, async_socket):
+        self.__fd_to_async_socket[async_socket.get_fileno()] = async_socket
 
-    def removeAsyncSocket(self, asyncSocket):
-        fileno = asyncSocket.fileno()
-        if fileno in self.__fdToAsyncSocket:
-            del self.__fdToAsyncSocket[fileno]
-        if ((fileno in self.__fdsRegisteredForRead) or
-                (fileno in self.__fdsRegisteredForWrite)):
-            self.unregisterForEvents(asyncSocket)
-            self.__fdsRegisteredForRead.discard(fileno)
-            self.__fdsRegisteredForWrite.discard(fileno)
+    def remove_async_socket(self, async_socket):
+        fileno = async_socket.get_fileno()
+        if fileno in self.__fd_to_async_socket:
+            del self.__fd_to_async_socket[fileno]
+        if ((fileno in self.__fds_registered_for_read) or
+                (fileno in self.__fds_registered_for_write)):
+            self.unregister_for_events(async_socket)
+            self.__fds_registered_for_read.discard(fileno)
+            self.__fds_registered_for_write.discard(fileno)
 
-    def invokeLater(self, event):
-        self.__eventQueue.append(event)
+    def register_callback_event(self, event):
+        self.__event_queue.append(event)
 
-    def registerAsyncSocketForRead(self, asyncSocket):
-        fileno = asyncSocket.fileno()
-        if fileno not in self.__fdsRegisteredForRead:
-            if fileno in self.__fdsRegisteredForWrite:
-                self.modifyRegistrationForEvents(asyncSocket, readEvents=True, writeEvents=True)
+    def register_async_socket_for_read(self, async_socket):
+        fileno = async_socket.get_fileno()
+        if fileno not in self.__fds_registered_for_read:
+            if fileno in self.__fds_registered_for_write:
+                self.modify_registration_for_events(async_socket, read_events=True, write_events=True)
             else:
-                self.registerForEvents(asyncSocket, readEvents=True, writeEvents=False)
-            self.__fdsRegisteredForRead.add(fileno)
+                self.register_for_events(async_socket, read_events=True, write_events=False)
+            self.__fds_registered_for_read.add(fileno)
 
-    def unregisterAsyncSocketForRead(self, asyncSocket):
-        fileno = asyncSocket.fileno()
-        if fileno in self.__fdsRegisteredForRead:
-            if fileno in self.__fdsRegisteredForWrite:
-                self.modifyRegistrationForEvents(asyncSocket, readEvents=False, writeEvents=True)
+    def unregister_async_socket_for_read(self, async_socket):
+        fileno = async_socket.get_fileno()
+        if fileno in self.__fds_registered_for_read:
+            if fileno in self.__fds_registered_for_write:
+                self.modify_registration_for_events(async_socket, read_events=False, write_events=True)
             else:
-                self.unregisterForEvents(asyncSocket)
-            self.__fdsRegisteredForRead.discard(fileno)
+                self.unregister_for_events(async_socket)
+            self.__fds_registered_for_read.discard(fileno)
 
-    def registerAsyncSocketForWrite(self, asyncSocket):
-        fileno = asyncSocket.fileno()
-        if fileno not in self.__fdsRegisteredForWrite:
-            if fileno in self.__fdsRegisteredForRead:
-                self.modifyRegistrationForEvents(asyncSocket, readEvents=True, writeEvents=True)
+    def register_async_socket_for_write(self, async_socket):
+        fileno = async_socket.get_fileno()
+        if fileno not in self.__fds_registered_for_write:
+            if fileno in self.__fds_registered_for_read:
+                self.modify_registration_for_events(async_socket, read_events=True, write_events=True)
             else:
-                self.registerForEvents(asyncSocket, readEvents=False, writeEvents=True)
-            self.__fdsRegisteredForWrite.add(fileno)
+                self.register_for_events(async_socket, read_events=False, write_events=True)
+            self.__fds_registered_for_write.add(fileno)
 
-    def unregisterAsyncSocketForWrite(self, asyncSocket):
-        fileno = asyncSocket.fileno()
-        if fileno in self.__fdsRegisteredForWrite:
-            if fileno in self.__fdsRegisteredForRead:
-                self.modifyRegistrationForEvents(asyncSocket, readEvents=True, writeEvents=False)
+    def unregister_async_socket_for_write(self, async_socket):
+        fileno = async_socket.get_fileno()
+        if fileno in self.__fds_registered_for_write:
+            if fileno in self.__fds_registered_for_read:
+                self.modify_registration_for_events(async_socket, read_events=True, write_events=False)
             else:
-                self.unregisterForEvents(asyncSocket)
-            self.__fdsRegisteredForWrite.discard(fileno)
+                self.unregister_for_events(async_socket)
+            self.__fds_registered_for_write.discard(fileno)
 
-    def getReadFDSet(self):
-        return self.__fdsRegisteredForRead
+    def get_read_fd_set(self):
+        return self.__fds_registered_for_read
 
-    def getWriteFDSet(self):
-        return self.__fdsRegisteredForWrite
+    def get_write_fd_set(self):
+        return self.__fds_registered_for_write
 
-    def getNumFDs(self):
-        return len(self.__fdToAsyncSocket)
+    def get_fd_count(self):
+        return len(self.__fd_to_async_socket)
 
-    def registerForEvents(self, asyncSocket, readEvents, writeEvents):
+    def register_for_events(self, async_socket, read_events, write_events):
         raise NotImplementedError
 
-    def modifyRegistrationForEvents(self, asyncSocket, readEvents, writeEvents):
+    def modify_registration_for_events(self, async_socket, read_events, write_events):
         raise NotImplementedError
 
-    def unregisterForEvents(self, asyncSocket):
+    def unregister_for_events(self, async_socket):
         raise NotImplementedError
 
-    def doPoll(self, block):
+    def do_poll(self, block):
         raise NotImplementedError
 
     def run(self):
         while True:
-            # As we process events in self.__eventQueue, more events are likely
-            # to be added to it by invokeLater.  We don't want to starve events
+            # As we process events in self.__event_queue, more events are likely
+            # to be added to it by invoke_callback.  We don't want to starve events
             # coming in from doPoll, so we limit the number of events processed
-            # from self.__eventQueue to the initial size of the queue.  After this if
-            # the queue is still not empty, set doPoll to be non blocking so we get
+            # from self.__event_queue to the initial size of the queue.  After this if
+            # the queue is still not empty, set do_poll to be non-blocking, so we get
             # back to processing events in the queue in a timely manner.
-            initialQueueLength = len(self.__eventQueue)
-            eventsProcessed = 0
-            while ((len(self.__eventQueue) > 0) and
-                   (eventsProcessed < initialQueueLength)):
-                event = self.__eventQueue.popleft()
+            initial_queue_length = len(self.__event_queue)
+            events_processed = 0
+            while ((len(self.__event_queue) > 0) and
+                   (events_processed < initial_queue_length)):
+                event = self.__event_queue.popleft()
                 event()
-                eventsProcessed += 1
+                events_processed += 1
 
-            if ((len(self.__eventQueue) == 0) and
-                    (len(self.__fdsRegisteredForRead) == 0) and
-                    (len(self.__fdsRegisteredForWrite) == 0)):
+            if ((len(self.__event_queue) == 0) and
+                    (len(self.__fds_registered_for_read) == 0) and
+                    (len(self.__fds_registered_for_write) == 0)):
                 break
 
             block = True
-            if len(self.__eventQueue) > 0:
+            if len(self.__event_queue) > 0:
                 block = False
-            self.doPoll(block=block)
+            self.do_poll(block=block)
 
-    def handleEventForFD(self, fd, readReady, writeReady, errorReady):
-        if fd in self.__fdToAsyncSocket:
-            asyncSocket = self.__fdToAsyncSocket[fd]
-            if readReady:
-                asyncSocket.handleRead()
-            if writeReady:
-                asyncSocket.handleWrite()
-            if errorReady:
-                asyncSocket.handleError()
+    def handle_event_for_fd(self, fd, read_ready, write_ready, error_ready):
+        if fd in self.__fd_to_async_socket:
+            async_socket = self.__fd_to_async_socket[fd]
+            if read_ready:
+                async_socket.handle_read()
+            if write_ready:
+                async_socket.handle_write()
+            if error_ready:
+                async_socket.handle_errors()
 
 
 class EPollAsyncIOService(AsyncIOService):
@@ -425,41 +422,41 @@ class EPollAsyncIOService(AsyncIOService):
         self.__poller = select.epoll()
 
     def __str__(self):
-        return 'EPollAsyncIOService [ fileno = %d ]' % self.__poller.fileno()
+        return "EPollAsyncIOService [ fileno = %d ]" % self.__poller.fileno()
 
-    def registerForEvents(self, asyncSocket, readEvents, writeEvents):
-        fileno = asyncSocket.fileno()
-        eventMask = 0
-        if readEvents:
-            eventMask |= select.EPOLLIN
-        if writeEvents:
-            eventMask |= select.EPOLLOUT
-        self.__poller.register(fileno, eventMask)
+    def register_for_events(self, async_socket, read_events, write_events):
+        fileno = async_socket.get_fileno()
+        event_mask = 0
+        if read_events:
+            event_mask |= select.EPOLLIN
+        if write_events:
+            event_mask |= select.EPOLLOUT
+        self.__poller.register(fileno, event_mask)
 
-    def modifyRegistrationForEvents(self, asyncSocket, readEvents, writeEvents):
-        fileno = asyncSocket.fileno()
-        eventMask = 0
-        if readEvents:
-            eventMask |= select.EPOLLIN
-        if writeEvents:
-            eventMask |= select.EPOLLOUT
-        self.__poller.modify(fileno, eventMask)
+    def modify_registration_for_events(self, async_socket, read_events, write_events):
+        fileno = async_socket.get_fileno()
+        event_mask = 0
+        if read_events:
+            event_mask |= select.EPOLLIN
+        if write_events:
+            event_mask |= select.EPOLLOUT
+        self.__poller.modify(fileno, event_mask)
 
-    def unregisterForEvents(self, asyncSocket):
-        fileno = asyncSocket.fileno()
+    def unregister_for_events(self, async_socket):
+        fileno = async_socket.get_fileno()
         self.__poller.unregister(fileno)
 
-    def doPoll(self, block):
-        readyList = self.__poller.poll(-1 if block else 0)
-        for (fd, eventMask) in readyList:
-            readReady = ((eventMask & select.EPOLLIN) != 0)
-            writeReady = ((eventMask & select.EPOLLOUT) != 0)
-            errorReady = ((eventMask &
-                           (select.EPOLLERR | select.EPOLLHUP)) != 0)
-            self.handleEventForFD(fd=fd,
-                                  readReady=readReady,
-                                  writeReady=writeReady,
-                                  errorReady=errorReady)
+    def do_poll(self, block):
+        ready_list = self.__poller.poll(-1 if block else 0)
+        for (fd, event_mask) in ready_list:
+            read_ready = ((event_mask & select.EPOLLIN) != 0)
+            write_ready = ((event_mask & select.EPOLLOUT) != 0)
+            error_ready = ((event_mask &
+                            (select.EPOLLERR | select.EPOLLHUP)) != 0)
+            self.handle_event_for_fd(fd=fd,
+                                     read_ready=read_ready,
+                                     write_ready=write_ready,
+                                     error_ready=error_ready)
 
 
 class KQueueAsyncIOService(AsyncIOService):
@@ -469,81 +466,81 @@ class KQueueAsyncIOService(AsyncIOService):
         self.__kqueue = select.kqueue()
 
     def __str__(self):
-        return 'KQueueAsyncIOService [ fileno = %d ]' % self.__kqueue.fileno()
+        return "KQueueAsyncIOService [ fileno = %d ]" % self.__kqueue.fileno()
 
-    def registerForEvents(self, asyncSocket, readEvents, writeEvents):
-        fileno = asyncSocket.fileno()
-        if readEvents:
-            readKE = select.kevent(ident=fileno,
-                                   filter=select.KQ_FILTER_READ,
-                                   flags=select.KQ_EV_ADD)
-        else:
-            readKE = select.kevent(ident=fileno,
-                                   filter=select.KQ_FILTER_READ,
-                                   flags=(select.KQ_EV_ADD | select.KQ_EV_DISABLE))
-        if writeEvents:
-            writeKE = select.kevent(ident=fileno,
-                                    filter=select.KQ_FILTER_WRITE,
+    def register_for_events(self, async_socket, read_events, write_events):
+        fileno = async_socket.get_fileno()
+        if read_events:
+            read_ke = select.kevent(ident=fileno,
+                                    filter=select.KQ_FILTER_READ,
                                     flags=select.KQ_EV_ADD)
         else:
-            writeKE = select.kevent(ident=fileno,
-                                    filter=select.KQ_FILTER_WRITE,
+            read_ke = select.kevent(ident=fileno,
+                                    filter=select.KQ_FILTER_READ,
                                     flags=(select.KQ_EV_ADD | select.KQ_EV_DISABLE))
-        # Should be able to put readKE and writeKE in a list in
-        # one call to kqueue.control, but this is broken due to Python issue 5910
-        self.__kqueue.control([readKE], 0, 0)
-        self.__kqueue.control([writeKE], 0, 0)
-
-    def modifyRegistrationForEvents(self, asyncSocket, readEvents, writeEvents):
-        fileno = asyncSocket.fileno()
-        if readEvents:
-            readKE = select.kevent(ident=fileno,
-                                   filter=select.KQ_FILTER_READ,
-                                   flags=select.KQ_EV_ENABLE)
+        if write_events:
+            write_ke = select.kevent(ident=fileno,
+                                     filter=select.KQ_FILTER_WRITE,
+                                     flags=select.KQ_EV_ADD)
         else:
-            readKE = select.kevent(ident=fileno,
-                                   filter=select.KQ_FILTER_READ,
-                                   flags=select.KQ_EV_DISABLE)
-        if writeEvents:
-            writeKE = select.kevent(ident=fileno,
-                                    filter=select.KQ_FILTER_WRITE,
+            write_ke = select.kevent(ident=fileno,
+                                     filter=select.KQ_FILTER_WRITE,
+                                     flags=(select.KQ_EV_ADD | select.KQ_EV_DISABLE))
+        # Should be able to put read_ke and write_ke in a list in
+        # one call to kqueue.control, but this is broken due to Python issue 5910
+        self.__kqueue.control([read_ke], 0, 0)
+        self.__kqueue.control([write_ke], 0, 0)
+
+    def modify_registration_for_events(self, async_socket, read_events, write_events):
+        fileno = async_socket.get_fileno()
+        if read_events:
+            read_ke = select.kevent(ident=fileno,
+                                    filter=select.KQ_FILTER_READ,
                                     flags=select.KQ_EV_ENABLE)
         else:
-            writeKE = select.kevent(ident=fileno,
-                                    filter=select.KQ_FILTER_WRITE,
+            read_ke = select.kevent(ident=fileno,
+                                    filter=select.KQ_FILTER_READ,
                                     flags=select.KQ_EV_DISABLE)
-        # Should be able to put readKE and writeKE in a list in
+        if write_events:
+            write_ke = select.kevent(ident=fileno,
+                                     filter=select.KQ_FILTER_WRITE,
+                                     flags=select.KQ_EV_ENABLE)
+        else:
+            write_ke = select.kevent(ident=fileno,
+                                     filter=select.KQ_FILTER_WRITE,
+                                     flags=select.KQ_EV_DISABLE)
+        # Should be able to put read_ke and write_ke in a list in
         # one call to kqueue.control, but this is broken due to Python issue 5910
-        self.__kqueue.control([readKE], 0, 0)
-        self.__kqueue.control([writeKE], 0, 0)
+        self.__kqueue.control([read_ke], 0, 0)
+        self.__kqueue.control([write_ke], 0, 0)
 
-    def unregisterForEvents(self, asyncSocket):
-        fileno = asyncSocket.fileno()
-        readKE = select.kevent(ident=fileno,
-                               filter=select.KQ_FILTER_READ,
-                               flags=select.KQ_EV_DELETE)
-        writeKE = select.kevent(ident=fileno,
-                                filter=select.KQ_FILTER_WRITE,
+    def unregister_for_events(self, async_socket):
+        fileno = async_socket.get_fileno()
+        read_ke = select.kevent(ident=fileno,
+                                filter=select.KQ_FILTER_READ,
                                 flags=select.KQ_EV_DELETE)
-        # Should be able to put readKE and writeKE in a list in
+        write_ke = select.kevent(ident=fileno,
+                                 filter=select.KQ_FILTER_WRITE,
+                                 flags=select.KQ_EV_DELETE)
+        # Should be able to put read_ke and write_ke in a list in
         # one call to kqueue.control, but this is broken due to Python issue 5910
-        self.__kqueue.control([readKE], 0, 0)
-        self.__kqueue.control([writeKE], 0, 0)
+        self.__kqueue.control([read_ke], 0, 0)
+        self.__kqueue.control([write_ke], 0, 0)
 
-    def doPoll(self, block):
-        eventList = self.__kqueue.control(
+    def do_poll(self, block):
+        event_list = self.__kqueue.control(
             None,
-            self.getNumFDs() * 2,
+            self.get_fd_count() * 2,
             None if block else 0)
-        for ke in eventList:
+        for ke in event_list:
             fd = ke.ident
-            readReady = (ke.filter == select.KQ_FILTER_READ)
-            writeReady = (ke.filter == select.KQ_FILTER_WRITE)
-            errorReady = ((ke.flags & select.KQ_EV_EOF) != 0)
-            self.handleEventForFD(fd=fd,
-                                  readReady=readReady,
-                                  writeReady=writeReady,
-                                  errorReady=errorReady)
+            read_ready = (ke.filter == select.KQ_FILTER_READ)
+            write_ready = (ke.filter == select.KQ_FILTER_WRITE)
+            error_ready = ((ke.flags & select.KQ_EV_EOF) != 0)
+            self.handle_event_for_fd(fd=fd,
+                                     read_ready=read_ready,
+                                     write_ready=write_ready,
+                                     error_ready=error_ready)
 
 
 class PollAsyncIOService(AsyncIOService):
@@ -553,41 +550,41 @@ class PollAsyncIOService(AsyncIOService):
         self.__poller = select.poll()
 
     def __str__(self):
-        return 'PollAsyncIOService'
+        return "PollAsyncIOService"
 
-    def registerForEvents(self, asyncSocket, readEvents, writeEvents):
-        fileno = asyncSocket.fileno()
-        eventMask = 0
-        if readEvents:
-            eventMask |= select.POLLIN
-        if writeEvents:
-            eventMask |= select.POLLOUT
-        self.__poller.register(fileno, eventMask)
+    def register_for_events(self, async_socket, read_events, write_events):
+        fileno = async_socket.get_fileno()
+        event_mask = 0
+        if read_events:
+            event_mask |= select.POLLIN
+        if write_events:
+            event_mask |= select.POLLOUT
+        self.__poller.register(fileno, event_mask)
 
-    def modifyRegistrationForEvents(self, asyncSocket, readEvents, writeEvents):
-        fileno = asyncSocket.fileno()
-        eventMask = 0
-        if readEvents:
-            eventMask |= select.POLLIN
-        if writeEvents:
-            eventMask |= select.POLLOUT
-        self.__poller.modify(fileno, eventMask)
+    def modify_registration_for_events(self, async_socket, read_events, write_events):
+        fileno = async_socket.get_fileno()
+        event_mask = 0
+        if read_events:
+            event_mask |= select.POLLIN
+        if write_events:
+            event_mask |= select.POLLOUT
+        self.__poller.modify(fileno, event_mask)
 
-    def unregisterForEvents(self, asyncSocket):
-        fileno = asyncSocket.fileno()
+    def unregister_for_events(self, async_socket):
+        fileno = async_socket.get_fileno()
         self.__poller.unregister(fileno)
 
-    def doPoll(self, block):
-        readyList = self.__poller.poll(None if block else 0)
-        for (fd, eventMask) in readyList:
-            readReady = ((eventMask & select.POLLIN) != 0)
-            writeReady = ((eventMask & select.POLLOUT) != 0)
-            errorReady = ((eventMask &
-                           (select.POLLERR | select.POLLHUP | select.POLLNVAL)) != 0)
-            self.handleEventForFD(fd=fd,
-                                  readReady=readReady,
-                                  writeReady=writeReady,
-                                  errorReady=errorReady)
+    def do_poll(self, block):
+        ready_list = self.__poller.poll(None if block else 0)
+        for (fd, event_mask) in ready_list:
+            read_ready = ((event_mask & select.POLLIN) != 0)
+            write_ready = ((event_mask & select.POLLOUT) != 0)
+            error_ready = ((event_mask &
+                            (select.POLLERR | select.POLLHUP | select.POLLNVAL)) != 0)
+            self.handle_event_for_fd(fd=fd,
+                                     read_ready=read_ready,
+                                     write_ready=write_ready,
+                                     error_ready=error_ready)
 
 
 class SelectAsyncIOService(AsyncIOService):
@@ -596,36 +593,39 @@ class SelectAsyncIOService(AsyncIOService):
         super(SelectAsyncIOService, self).__init__()
 
     def __str__(self):
-        return 'SelectAsyncIOService'
+        return "SelectAsyncIOService"
 
-    def registerForEvents(self, asyncSocket, readEvents, writeEvents):
+    def register_for_events(self, async_socket, read_events, write_events):
+        # Not Implemented in this Implementation
         pass
 
-    def modifyRegistrationForEvents(self, asyncSocket, readEvents, writeEvents):
+    def modify_registration_for_events(self, async_socket, read_events, write_events):
+        # Not Implemented in this Implementation
         pass
 
-    def unregisterForEvents(self, asyncSocket):
+    def unregister_for_events(self, async_socket):
+        # Not Implemented in this Implementation
         pass
 
-    def doPoll(self, block):
-        allFDSet = self.getReadFDSet() | self.getWriteFDSet()
-        (readList, writeList, exceptList) = \
-            select.select(self.getReadFDSet(), self.getWriteFDSet(), allFDSet,
+    def do_poll(self, block):
+        all_fd_set = self.get_read_fd_set() | self.get_write_fd_set()
+        (read_list, write_list, except_list) = \
+            select.select(self.get_read_fd_set(), self.get_write_fd_set(), all_fd_set,
                           None if block else 0)
-        for fd in allFDSet:
-            readReady = fd in readList
-            writeReady = fd in writeList
-            errorReady = fd in exceptList
-            if readReady or writeReady or errorReady:
-                self.handleEventForFD(fd=fd,
-                                      readReady=readReady,
-                                      writeReady=writeReady,
-                                      errorReady=errorReady)
+        for fd in all_fd_set:
+            read_ready = fd in read_list
+            write_ready = fd in write_list
+            error_ready = fd in except_list
+            if read_ready or write_ready or error_ready:
+                self.handle_event_for_fd(fd=fd,
+                                         read_ready=read_ready,
+                                         write_ready=write_ready,
+                                         error_ready=error_ready)
 
 
-def createAsyncIOService(allow_epoll=True,
-                         allow_kqueue=True,
-                         allow_poll=True):
+def create_async_io_service(allow_epoll=True,
+                            allow_kqueue=True,
+                            allow_poll=True):
     """
     Create an AsyncIOService supported by the platform and parameters.
     :param allow_epoll:

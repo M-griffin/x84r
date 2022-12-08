@@ -80,22 +80,22 @@ class Connection(object):
         :param io_service:
         :param client_socket:
         """
-        self.__ioService = io_service
-        self.__dataFromClient = ''
-        self.__writingToClient = False
+        self.__io_service = io_service
+        self.__data_from_client = ''
+        self.__writing_to_client = False
         self.__client_socket = client_socket
-        self.__clientHostnameString = ('{peer} -> {name}'.format(peer=self.__client_socket.getpeername(),
-                                                                 name=self.__client_socket.getsockname()))
+        self.__client_hostname_string = ("{peer} -> {name}".format(peer=self.__client_socket.get_peer_name(),
+                                                                   name=self.__client_socket.get_socket_name()))
 
     def close(self) -> None:
         """
         Closes the Socket On Error or Disconnect
         :return:
         """
-        if not self.__writingToClient:
+        if not self.__writing_to_client:
             if ((not self.__client_socket.closed()) and
-                    (len(self.__clientHostnameString) > 0)):
-                logging.info('disconnect %s' % self.__clientHostnameString)
+                    (len(self.__client_hostname_string) > 0)):
+                logging.info("disconnect %s" % self.__client_hostname_string)
 
             self.__client_socket.close()
 
@@ -112,13 +112,13 @@ class Acceptor(object):
     def __init__(self, io_service, local_address, local_port):
 
         self.__io_service = io_service
-        self.__async_socket = io_service.createAsyncSocket()
-        self.__async_socket.setReuseAddress()
+        self.__async_socket = io_service.create_async_socket()
+        self.__async_socket.set_reuse_address()
         self.__async_socket.bind((local_address, local_port))
         self.__async_socket.listen()
-        self.__async_socket.asyncAccept(self.__accept_callback)
+        self.__async_socket.async_accept(self.__accept_callback)
 
-        logging.info('listening for Telnet on %s' % str(self.__async_socket.getsockname()))
+        logging.info("listening for Telnet on %s" % str(self.__async_socket.get_socket_name()))
 
     def __accept_callback(self, sock, err) -> None:
         """
@@ -128,13 +128,13 @@ class Acceptor(object):
         :return:
         """
         if err == 0 and sock is not None:
-            logging.info('accept %s -> %s' % (sock.getpeername(), sock.getsockname()))
+            logging.info('accept %s -> %s' % (sock.get_peer_name(), sock.get_socket_name()))
 
             ''' Spawn new session instance passing ioService for socket call backs.'''
-            logging.info('creating session')
+            logging.info("creating session")
             new_session = session.ClientSession(connection=Connection(self.__io_service, sock))
 
-            logging.info('start_up_async_session')
+            logging.info("start_up_async_session")
             new_session.wait_for_async_data()
 
             # not needed just yet, playing around with singleton!
@@ -145,10 +145,10 @@ class Acceptor(object):
             # manager.add_session(new_session)
 
         else:
-            logging.error('Errors during accept callback')
+            logging.error("Errors during accept callback")
 
         # Loop back to set up callback event for accepting the next connection
-        self.__async_socket.asyncAccept(self.__accept_callback)
+        self.__async_socket.async_accept(self.__accept_callback)
 
 
 def main() -> int:
@@ -160,7 +160,7 @@ def main() -> int:
     """
 
     # Setup Async IO_Service for handling connections
-    io_service = asio.createAsyncIOService()
+    io_service = asio.create_async_io_service()
     logging.info('io_service = ' + str(io_service))
 
     # Setup Acceptor to listen for new telnet connections and spawn sessions '''

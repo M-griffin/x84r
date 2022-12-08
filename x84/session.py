@@ -127,7 +127,7 @@ class ClientSession(object):
         self.connect_time = time.time()
         self.last_input_time = time.time()
 
-        self.addrport = connection.get_socket().getpeername()
+        self.addrport = connection.get_socket().get_peer_name()
 
         """ Srart the Telnet Banner Negotiation """
         self.__telnet_startup.run_telnet_startup()
@@ -152,7 +152,7 @@ class ClientSession(object):
         """
         if self.__is_active:
             # logging.info('session asyncRead')
-            self.__client_socket.asyncRead(MAX_READ_BYTES, self.__async_read_callback)
+            self.__client_socket.async_read(MAX_READ_BYTES, self.__async_read_callback)
 
     def __async_read_callback(self, data, err) -> None:
         """
@@ -196,7 +196,7 @@ class ClientSession(object):
         """
         if data and self.__is_active:
             # logging.info('async_write: ' + str(data))
-            self.__client_socket.asyncWriteAll(data, self.__async_write_callback)
+            self.__client_socket.async_write_all(data, self.__async_write_callback)
 
         # logging.info('async_write done')
 

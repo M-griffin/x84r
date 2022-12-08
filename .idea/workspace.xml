@@ -2,11 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="704a0184-7751-4a16-8a86-50e69745b084" name="Default" comment="Merge branch 'master' of https://github.com/M-Griffin/PyPacketMail&#10;&#10;Conflicts:&#10;&#9;README.md">
-      <change beforePath="$PROJECT_DIR$/.idea/dictionaries/Blue.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dictionaries/Blue.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/sonarlint/issuestore/index.pb" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/sonarlint/issuestore/index.pb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/x84/asio.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/asio.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/x84/engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/engine.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/x84/telnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/telnet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/x84/session.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/session.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -231,6 +231,9 @@
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Find" order="1" />
     </layout>
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.fileTypeFactory" implementationName="requirements.txt" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
