@@ -12,7 +12,6 @@ from telnetlib import IP, AO, AYT, EC, EL, GA, SB
 # local
 from x84.deadline_timer import DeadLineTimer
 
-
 """
 Telnet server for x84.
 Converted 5/6/2018 to more of a Telnet Parser then a session spawn.
@@ -59,7 +58,7 @@ IS = bytes([0])  # Sub-process negotiation IS command
 SEND = bytes([1])  # Sub-process negotiation SEND command
 UNSUPPORTED_WILL = (LINEMODE, LFLOW, TSPEED, ENCRYPT, AUTHENTICATION)
 
-#---[ Telnet Notes ]-----------------------------------------------------------
+# ---[ Telnet Notes ]-----------------------------------------------------------
 # (See RFC 854 for more information)
 #
 # Negotiating a Local Option
@@ -99,7 +98,7 @@ UNSUPPORTED_WILL = (LINEMODE, LFLOW, TSPEED, ENCRYPT, AUTHENTICATION)
 
 UNKNOWN = -1
 
-#-----------------------------------------------------------------Telnet Option
+# -----------------------------------------------------------------Telnet Option
 
 
 #: List of globals that may match an iac command option bytes
@@ -119,7 +118,7 @@ _DEBUG_OPTS = dict([(value, key)
                      'VT3270REGIME', 'TTYLOC', 'SUPDUPOUTPUT', 'SUPDUP',
                      'DET', 'BM', 'XASCII', 'RCP', 'NAMS', 'RCTE', 'NAOL',
                      'NAOP', 'NAOCRD', 'NAOHTS', 'NAOHTD', 'NAOFFD', 'NAOVTS',
-                     'NAOVTD', 'NAOLFD', )])
+                     'NAOVTD', 'NAOLFD',)])
 
 
 def name_command(byte):
@@ -133,7 +132,6 @@ def name_commands(cmds, sep=' '):
 
 
 class TelnetOption(object):
-
     """
     Simple class used to track the status of an extended Telnet option.
 
@@ -143,6 +141,7 @@ class TelnetOption(object):
     - ``remote_option``: UNKNOWN (default), True, or False.
     - ``reply_pending``: True or Fale.
     """
+
     # pylint: disable=R0903
     #         Too few public methods (0/2)
 
@@ -150,15 +149,14 @@ class TelnetOption(object):
         """
         Set attribute defaults on init.
         """
-        self.local_option = UNKNOWN     # Local state of an option
-        self.remote_option = UNKNOWN    # Remote state of an option
-        self.reply_pending = False      # Are we expecting a reply?
+        self.local_option = UNKNOWN  # Local state of an option
+        self.remote_option = UNKNOWN  # Remote state of an option
+        self.reply_pending = False  # Are we expecting a reply?
 
 
 # ------------------------------------------------------------------------Telnet
 
 class TelnetOptionParser(object):
-
     """
     Represents a remote Telnet Client, instantiated from TelnetServer.
     """
@@ -178,7 +176,7 @@ class TelnetOptionParser(object):
 
     def __init__(self, session_handle):
 
-        self.__session = session_handle        
+        self.__session = session_handle
         self.env_REQUESTED = False
         self.env_REPLIED = False
 
@@ -299,7 +297,7 @@ class TelnetOptionParser(object):
 
     def iac_sniffer(self, byte) -> bytes:
         """
-        Watches incomming data for Telnet IAC sequences.
+        Watches incoming data for Telnet IAC sequences.
         Passes the data, if any, with the IAC commands stripped to
         _recv_byte().
         """
@@ -368,7 +366,7 @@ class TelnetOptionParser(object):
             # Disconnect and close
             self.__session.close()
             logging.info('{client.addrport} received (IAC, IP): closing.'
-                          .format(client=self.__session))
+                         .format(client=self.__session))
         elif cmd == AO:
             flushed = len(self.recv_buffer)
             self.recv_buffer.clear()
@@ -468,7 +466,7 @@ class TelnetOptionParser(object):
             if self.check_local_option(option) is UNKNOWN:
                 self._note_local_option(option, False)
                 logging.info('{client.addrport}: unhandled do: {opt}.'
-                               .format(client=self.__session, opt=name_command(option)))
+                             .format(client=self.__session, opt=name_command(option)))
                 self._iac_wont(option)
 
     def _send_status(self) -> None:
@@ -695,7 +693,7 @@ class TelnetOptionParser(object):
             logging.info("env['DISPLAY'] = %r.", bytestring)
         elif prev_display != bytestring:
             logging.info("env['DISPLAY'] = %r by XDISPLOC was:%s.",
-                          bytestring, prev_display)
+                         bytestring, prev_display)
         else:
             logging.info('XDSIPLOC ignored (DISPLAY already set).')
         self.__session.env['DISPLAY'] = bytestring
@@ -866,7 +864,6 @@ class TelnetOptionParser(object):
 
 
 class TelnetNegotiation(object):
-
     __option_parser = None
     __session = None
     __logger = None

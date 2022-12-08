@@ -1,42 +1,34 @@
 #!/usr/bin/env python
 """
-Command-line launcher and Async Connection loop for x/84r.
+Command-line launcher and Async Connection loop
 The system waits for Connections Events and spawns unique session instances
 Keeping themselves alive with Events and Callbacks.  No Threads per session instance
-and no blocking i/o or loops.  All receives data is state tracked and pushed through to the
+and no blocking i/o or loops.  All received data is state tracked and pushed through to the
 Interface or script then returns right away for next event.
 
 Michael Griffin
+High Level Shell based off of X/84 BBS, re-written for Python 3 and Extending Concepts.
 """
 # Place ALL metadata in setup.py, except where not suitable, place here.
 # For any contributions, feel free to tag __author__ etc. at top of such file.
-__author__ = "Johannes Lundberg (jojo), Jeff Quast (dingo), Michael Griffin (Mercyful Fate)"
-__url__ = u'https://github.com/jquast/x84/'
-__copyright__ = "Copyright 2003"
+__author__ = "Michael Griffin"
+__url__ = u'https://github.com/m-griffin'
+__copyright__ = "Copyright 2018-2022"
 __credits__ = [
     # use 'scene' names unless preferred or unavailable.
-    "zipe",
-    "jojo",
-    "maze",
-    "dingo",
-    "spidy",
-    "beardy",
-    "haliphax",
-    "megagumbo",
-    "hellbeard",
-    "Mercyful Fate",
+    "dingo"
 ]
-__license__ = 'ISC'
+__license__ = 'N/A'
 
 import logging
 import subprocess
-import sys
+# import sys
 # import os
 # import sys
 
 from x84 import asio
 from x84 import session
-from x84 import session_mgr
+# from x84 import session_mgr
 
 MAX_READ_BYTES = 2 ** 16
 
@@ -66,7 +58,7 @@ def configure_logging():
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(name)s[%(levelname)s]: %(message)s')
     console_handler.setFormatter(formatter)
     root.addHandler(console_handler)
 
