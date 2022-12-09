@@ -152,19 +152,18 @@ class Acceptor(object):
 
 
 def main() -> int:
+    """ Main x/84 Command line Telnet Server Startup. """
 
     configure_logging()
-
-    """
-    Main x/84 Command line Telnet Server Startup.
-    """
 
     # Setup Async IO_Service for handling connections
     io_service = asio.create_async_io_service()
     logging.info('io_service = ' + str(io_service))
 
     # Setup Acceptor to listen for new telnet connections and spawn sessions '''
-    Acceptor(io_service, local_address='127.0.0.1', local_port=6023)
+    # Using 127.0.0.1 will only allow local host connection, using 0.0.0.0 open up to external connections.
+    # Acceptor(io_service, local_address='127.0.0.1', local_port=6023)
+    Acceptor(io_service, local_address='0.0.0.0', local_port=6023)
 
     logging.info('starting service = ' + str(io_service))
     io_service.run()

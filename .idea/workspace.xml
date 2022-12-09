@@ -4,9 +4,10 @@
     <list default="true" id="704a0184-7751-4a16-8a86-50e69745b084" name="Default" comment="Merge branch 'master' of https://github.com/M-Griffin/PyPacketMail&#10;&#10;Conflicts:&#10;&#9;README.md">
       <change beforePath="$PROJECT_DIR$/.idea/sonarlint/issuestore/index.pb" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/sonarlint/issuestore/index.pb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/x84/ansi_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/ansi_parser.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/x84/asio.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/asio.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/x84/engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/engine.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/x84/session.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/session.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/x84/telnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/telnet.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -120,18 +121,18 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/git/x84r/venv&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "last_opened_file_path": "C:/git/x84r/venv",
+    "settings.editor.selected.configurable": "com.leinardi.pycharm.pylint.PylintConfigurable"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
-      &quot;Python&quot;
+  "keyToStringList": {
+    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
+      "Python"
     ]
   }
-}</component>
+}]]></component>
   <component name="PyConsoleOptionsProvider">
     <option name="myPythonConsoleState">
       <console-settings module-name="x84r" is-module-sdk="true">
@@ -191,8 +192,6 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.engine" />
-        <item itemvalue="Python.engine" />
-        <item itemvalue="Python.engine" />
       </list>
     </recent_temporary>
   </component>
@@ -250,6 +249,17 @@
     <ignored-roots>
       <path value="$PROJECT_DIR$/.." />
     </ignored-roots>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/x84/telnet.py</url>
+          <line>264</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$USER_HOME$/AppData/Local/Programs/Python/Python36/Lib/asyncio/coroutines.py">

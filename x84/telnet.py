@@ -255,19 +255,23 @@ class TelnetOptionParser(object):
 
     def request_env(self) -> None:
         """
+        TODO Not Working Current, needs rewrite, errors on bytes and Joins!
+
         Request sub-negotiation NEW_ENVIRON. See RFC 1572.
-        """
+
         if self.env_REQUESTED:
             return  # avoid asking twice ..
-        rstr = b''.join([IAC, SB, NEW_ENVIRON, SEND, bytes([0])])
+        byte_zero = bytes([0])
+        rstr = b''.join([IAC, SB, NEW_ENVIRON, SEND, byte_zero])
         rstr += bytes(chr(0).join(
             ("USER TERM SHELL COLUMNS LINES C_CTYPE XTERM_LOCALE DISPLAY "
              "SSH_CLIENT SSH_CONNECTION SSH_TTY HOME HOSTNAME PWD MAIL LANG "
              "PWD UID USER_ID EDITOR LOGNAME".split())))
+
         rstr += b''.join([bytes([3]), IAC, SE])
         self.env_REQUESTED = True
         self.send_str(rstr)
-
+        """
     def request_do_ttype(self) -> None:
         """
         Begins TERMINAL-TYPE negotiation
@@ -394,7 +398,7 @@ class TelnetOptionParser(object):
 
     def _three_byte_cmd(self, option) -> None:
         """
-        Handle incoming Telnet commmands that are three bytes long.
+        Handle incoming Telnet commands that are three bytes long.
         """
         cmd = bytes(self.telnet_got_cmd)
 

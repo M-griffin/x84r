@@ -24,13 +24,14 @@ class ScreenBlockPixel(object):
         Attributes
         """
         # Init will \x00 as we will skip these bytes when parsing.
-        self.attributes = self.create_attribue()
+        self.attributes = self.create_attribute()
         # Used Later on for light-bars.
         # 'selected_attribute': 0,
         # 'selected_foreground': 0,
         # 'selected_background': 0
 
-    def create_attribue(self) -> dict:
+    @staticmethod
+    def create_attribute() -> dict:
         """ Screen Block / Glyph Attributes """
         return dict({
             'glyph': b'\x00',
@@ -54,7 +55,7 @@ class ScreenBlockPixel(object):
         Clear or fill with passed attribute
         :return:
         """
-        self.attributes = self.create_attribue()
+        self.attributes = ScreenBlockPixel.create_attribute()
 
 
 class AnsiScreenProcessor(object):
@@ -82,8 +83,8 @@ class AnsiScreenProcessor(object):
         self._number_lines = term_height  # TERM Height
         self._characters_per_line = term_width  # TERM Width
 
-        self._attributes = self.create_attribue()
-        self._saved_attributes = self.create_attribue()
+        self._attributes = ScreenBlockPixel.create_attribute()
+        self._saved_attributes = ScreenBlockPixel.create_attribute()
 
         # Max positions used in the current buffer
         self._max_x_position = 1
@@ -91,17 +92,6 @@ class AnsiScreenProcessor(object):
 
         # Saving data to Screen Buffer
         # self._screen_buffer[self._position].set(self._glyph, self.attributes)
-
-    def create_attribue(self) -> dict:
-        """ Screen Block / Glyph Attributes """
-        return dict({
-            'glyph': b'\x00',
-            'x_position': 1,
-            'y_position': 1,
-            'foreground': 37,
-            'background': 40,
-            'attribute': 0
-        })
 
     def save_attributes(self) -> None:
         """ Save Current Screen Attributes and position """
@@ -125,7 +115,7 @@ class AnsiScreenProcessor(object):
                                for _ in range(self._number_lines *
                                               self._characters_per_line)]
         self._is_screen_cleared = True
-        self._attributes = self.create_attribue()
+        self._attributes = ScreenBlockPixel.create_attribute()
         self._max_y_position = 1
         self._max_x_position = 1
 
@@ -155,7 +145,7 @@ class AnsiScreenProcessor(object):
     def get_position(self) -> int:
         """ Returns array position """
         return ((self._attributes['y_position'] - 1) * self._characters_per_line) + \
-                   (self._attributes['x_position'] - 1)
+               (self._attributes['x_position'] - 1)
 
     def set_screen_pixel(self, screen_pixel) -> None:
         """
@@ -170,7 +160,7 @@ class AnsiScreenProcessor(object):
             self.scroll_up()
             self._attributes['y_position'] = self._number_lines
 
-        self._attributes = self.create_attribue()
+        self._attributes = ScreenBlockPixel.create_attribute()
         position = self.get_position()
 
         # Set the pixel in the buffer
@@ -341,11 +331,11 @@ class AnsiScreenProcessor(object):
         esc_control_methods = dict({
             b'H': set_cursor_position,
             b'f': set_cursor_position, ''' Alt position '''
-            b'A': move_cursor_up,
-            b'F': move_cursor_up,      ''' previous Line TODO x-position updates'''
-            b'B': move_cursor_down,
-            b'E': move_cursor_down,    ''' Next Line TODO x-position updates '''
-            b'C': move_cursor_forward,
+                                       b'A': move_cursor_up,
+            b'F': move_cursor_up, ''' previous Line TODO x-position updates'''
+                                  b'B': move_cursor_down,
+            b'E': move_cursor_down, ''' Next Line TODO x-position updates '''
+                                    b'C': move_cursor_forward,
             b'D': move_cursor_backwards,
             b'G': move_abs_x_position,
             b's': self.save_attributes,
@@ -466,12 +456,3 @@ class AnsiScreenProcessor(object):
                 """
                 Not ESC Sequence, parsing for newline and text data.
                 """
-
-
-
-
-
-
-
-
-
