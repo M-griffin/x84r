@@ -2,7 +2,7 @@
 """ Session Manager for x/84. """
 
 
-class SessionManager(object):
+class SessionManager:
 
     # Session Manager Singleton Class.
     class __SessionManager:
@@ -29,6 +29,5 @@ class SessionManager(object):
     def __getattr__(self, name):
         return getattr(self.instance, name)
 
-    def __setattr__(self, name):
+    def __setattr__(self, name) -> None:
         return setattr(self.instance, name)
-

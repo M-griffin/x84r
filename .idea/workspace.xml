@@ -2,11 +2,15 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="704a0184-7751-4a16-8a86-50e69745b084" name="Default" comment="Merge branch 'master' of https://github.com/M-Griffin/PyPacketMail&#10;&#10;Conflicts:&#10;&#9;README.md">
+      <change beforePath="$PROJECT_DIR$/.idea/dictionaries/Blue.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dictionaries/Blue.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/sonarlint/issuestore/index.pb" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/sonarlint/issuestore/index.pb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/x84/ansi_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/ansi_parser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/x84/asio.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/asio.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/x84/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/x84/deadline_timer.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/deadline_timer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/x84/engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/engine.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/x84/session.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/session.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/x84/session_mgr.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/session_mgr.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/x84/telnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/x84/telnet.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -65,6 +69,9 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/x84/telnet.py" root0="SKIP_HIGHLIGHTING" />
+  </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
@@ -90,6 +97,9 @@
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="ProjectErrors" />
   </component>
   <component name="ProjectFrameBounds">
     <option name="x" value="539" />
@@ -125,6 +135,7 @@
   "keyToString": {
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "last_opened_file_path": "C:/git/x84r/venv",
+    "run.code.analysis.last.selected.profile": "pProject Default",
     "settings.editor.selected.configurable": "com.leinardi.pycharm.pylint.PylintConfigurable"
   },
   "keyToStringList": {
@@ -255,7 +266,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/x84/telnet.py</url>
-          <line>264</line>
+          <line>265</line>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
       </breakpoints>

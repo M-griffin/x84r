@@ -1,6 +1,3 @@
-import time
-from threading import Thread
-
 """
 DeadLine timer class created timed call back when wait for tasks to complete.
 Also includes a secondary async task for executing methods in their own thread.
@@ -8,8 +5,11 @@ Also includes a secondary async task for executing methods in their own thread.
 Michael Griffin
 """
 
+import time
+from threading import Thread
 
-class DeadLineTimer(object):
+
+class DeadLineTimer:
     """
     DeadLine timer to mimic boost ASIO is a simplistic way
     For import and telnet negotiations we need a timer to let us know
@@ -24,7 +24,8 @@ class DeadLineTimer(object):
         inst = object.__new__(cls)
         return inst
 
-    def async_timer(self, interval, callback):
+    @staticmethod
+    def async_timer(interval, callback):
         """
         Async Timer waits for the interval then executes the callback
         :param interval:
@@ -33,9 +34,10 @@ class DeadLineTimer(object):
         """
         BackgroundTimer(interval=interval, callback=callback).start()
 
-    def async_task(self, interval, reference, callback):
+    @staticmethod
+    def async_task(interval, reference, callback):
         """
-        Async Tasks executes work until interval is readhed, then executes callback.
+        Async Tasks executes work until interval is read, then executes callback.
         :param interval:
         :param reference:
         :param callback:

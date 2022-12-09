@@ -1,9 +1,16 @@
 <component name="ProjectDictionaryState">
   <dictionary name="Blue">
     <words>
+      <w>asctime</w>
+      <w>astextplain</w>
       <w>fileno</w>
       <w>kqueue</w>
+      <w>levelname</w>
+      <w>naws</w>
+      <w>nterm</w>
       <w>riekenberg</w>
+      <w>rlogin</w>
+      <w>telnetlib</w>
     </words>
   </dictionary>
 </component>

@@ -1,17 +1,3 @@
-from __future__ import absolute_import
-
-import logging
-import collections
-import itertools
-
-from telnetlib import LINEMODE, NAWS, NEW_ENVIRON, ENCRYPT, AUTHENTICATION
-from telnetlib import BINARY, SGA, ECHO, STATUS, TTYPE, TSPEED, LFLOW
-from telnetlib import XDISPLOC, IAC, DONT, DO, WONT, WILL, SE, NOP, DM, BRK
-from telnetlib import IP, AO, AYT, EC, EL, GA, SB
-
-# local
-from x84.deadline_timer import DeadLineTimer
-
 """
 Telnet server for x84.
 Converted 5/6/2018 to more of a Telnet Parser then a session spawn.
@@ -36,6 +22,30 @@ Changes from miniboa:
 - GA and SGA
 - utf-8 safe
 """
+
+from __future__ import absolute_import
+
+import collections
+import itertools
+import logging
+
+from telnetlib3 import BINARY, SGA, ECHO, STATUS, TTYPE, TSPEED, LFLOW
+from telnetlib3 import IP, AO, AYT, EC, EL, GA, SB
+from telnetlib3 import LINEMODE, NAWS, NEW_ENVIRON, ENCRYPT, AUTHENTICATION
+from telnetlib3 import XDISPLOC, IAC, DONT, DO, WONT, WILL, SE, NOP, DM, BRK
+
+# Not sure why this is complaining, it's working and appears correct.
+# pylint: disable=import-error
+from x84.deadline_timer import DeadLineTimer
+
+# Some Pylint Items to Disable, until more time to rewrite
+# Majority was Python 2 Code rewritten.
+# pylint: disable=logging-format-interpolation
+# pylint: disable=consider-using-f-string
+# pylint: disable=too-many-branches
+# pylint: disable=logging-not-lazy
+# pylint: disable=consider-using-generator
+
 # ------------------------------------------------------------------------------
 #   miniboa/async.py
 #   miniboa/telnet.py
@@ -52,7 +62,6 @@ Changes from miniboa:
 #   under the License.
 # ------------------------------------------------------------------------------
 
-# logger = logging.getLogger('node_' + __name__)
 
 IS = bytes([0])  # Sub-process negotiation IS command
 SEND = bytes([1])  # Sub-process negotiation SEND command
@@ -100,7 +109,7 @@ UNKNOWN = -1
 
 # -----------------------------------------------------------------Telnet Option
 
-
+# pylint: disable=consider-using-dict-comprehension
 #: List of globals that may match an iac command option bytes
 _DEBUG_OPTS = dict([(value, key)
                     for key, value in globals().items() if key in
@@ -131,7 +140,7 @@ def name_commands(cmds, sep=' '):
     return sep.join([name_command(bytes([byte])) for byte in cmds])
 
 
-class TelnetOption(object):
+class TelnetOption:
     """
     Simple class used to track the status of an extended Telnet option.
 
@@ -156,7 +165,7 @@ class TelnetOption(object):
 
 # ------------------------------------------------------------------------Telnet
 
-class TelnetOptionParser(object):
+class TelnetOptionParser:
     """
     Represents a remote Telnet Client, instantiated from TelnetServer.
     """
@@ -165,25 +174,19 @@ class TelnetOptionParser(object):
     #         Too many public methods
 
     kind = 'telnet'
-    env_REQUESTED = False
-    env_REPLIED = False
+    env_requested = False
+    env_replied = False
 
     #: maximum size of telnet sub-negotiation string, allowing for a fairly
     #: large value for NEW_ENVIRON.
-    SB_MAXLEN = 65534
-
+    MAX_LENGTH = 65534
     __session = None
 
     def __init__(self, session_handle):
 
         self.__session = session_handle
-        self.env_REQUESTED = False
-        self.env_REPLIED = False
-
-        # Working on Rewriting this, this no longer needs to handle connections.
-        # super(TelnetClient, self).__init__(sock, address_pair, on_naws)
-
-        # self.telnet_sb_buffer = array.array('c') PY3 doesn't have 'c' type.
+        self.env_requested = False
+        self.env_replied = False
         self.telnet_sb_buffer = collections.deque()
 
         # State variables for interpreting incoming telnet commands
@@ -192,9 +195,8 @@ class TelnetOptionParser(object):
         self.telnet_got_sb = False
         self.telnet_opt_dict = {}
 
-        self.on_naws = None
-
     def is_active(self) -> bool:
+        """ Check if Session Is Still Active """
         return self.__session.is_active()
 
     def send_str(self, data: bytes) -> None:
@@ -255,23 +257,21 @@ class TelnetOptionParser(object):
 
     def request_env(self) -> None:
         """
-        TODO Not Working Current, needs rewrite, errors on bytes and Joins!
-
         Request sub-negotiation NEW_ENVIRON. See RFC 1572.
-
-        if self.env_REQUESTED:
-            return  # avoid asking twice ..
-        byte_zero = bytes([0])
-        rstr = b''.join([IAC, SB, NEW_ENVIRON, SEND, byte_zero])
-        rstr += bytes(chr(0).join(
-            ("USER TERM SHELL COLUMNS LINES C_CTYPE XTERM_LOCALE DISPLAY "
-             "SSH_CLIENT SSH_CONNECTION SSH_TTY HOME HOSTNAME PWD MAIL LANG "
-             "PWD UID USER_ID EDITOR LOGNAME".split())))
-
-        rstr += b''.join([bytes([3]), IAC, SE])
-        self.env_REQUESTED = True
-        self.send_str(rstr)
         """
+        if self.env_requested:
+            # avoid asking twice ..
+            return
+
+        rstr = b''.join([IAC, SB, NEW_ENVIRON, SEND, BINARY, SGA])
+        rstr += bytes(str("USER TERM SHELL COLUMNS LINES C_CTYPE XTERM_LOCALE DISPLAY "
+                          "SSH_CLIENT SSH_CONNECTION SSH_TTY HOME HOSTNAME PWD MAIL LANG "
+                          "PWD UID USER_ID EDITOR LOGNAME".split()), encoding='utf8')
+
+        rstr += b''.join([SGA, IAC, SE])
+        self.env_requested = True
+        self.send_str(rstr)
+
     def request_do_ttype(self) -> None:
         """
         Begins TERMINAL-TYPE negotiation
@@ -291,15 +291,14 @@ class TelnetOptionParser(object):
         # Must be escaped 255 (IAC + IAC) to avoid IAC interpretation.
         self.send_str(ucs.encode(encoding, 'replace').replace(IAC, 2 * IAC))
 
-    '''
-    def _recv_byte(self, byte) -> None:
-        """
-        Buffer non-telnet commands bytestrings into recv_buffer.
-        """
-        self.recv_buffer.fromstring(byte)
-    '''
+    # Commented out, Not used at this time.
+    # def _recv_byte(self, byte) -> None:
+    #    """
+    #    Buffer non-telnet commands byte strings into recv_buffer.
+    #    """
+    #    self.recv_buffer.fromstring(byte)
 
-    def iac_sniffer(self, byte) -> bytes:
+    def iac_sniffer(self, byte: bytes):
         """
         Watches incoming data for Telnet IAC sequences.
         Passes the data, if any, with the IAC commands stripped to
@@ -324,8 +323,7 @@ class TelnetOptionParser(object):
                 return byte
 
             # None
-            # logging.info('return sniff b'': ')
-            return bytes([0])
+            return None
 
         # Did we get sent a second IAC?
         if byte == IAC and self.telnet_got_sb is True:
@@ -346,6 +344,8 @@ class TelnetOptionParser(object):
             else:
                 # Nope, must be a two-byte command
                 self._two_byte_cmd(byte)
+
+        return None
 
     def _two_byte_cmd(self, cmd):
         """
@@ -369,20 +369,17 @@ class TelnetOptionParser(object):
         elif cmd == IP:
             # Disconnect and close
             self.__session.close()
-            logging.info('{client.addrport} received (IAC, IP): closing.'
+            logging.info('{client.addr_port} received (IAC, IP): closing.'
                          .format(client=self.__session))
         elif cmd == AO:
-            flushed = len(self.recv_buffer)
-            self.recv_buffer.clear()
-            logging.info('Abort Output (AO); %s bytes discarded.', flushed)
+            logging.warning('Abort Output (AO) received; ignored.')
         elif cmd == AYT:
             self.send_str(bytes('\b'))
             logging.info('Are You There (AYT); "\\b" sent.')
         elif cmd == EC:
-            self.recv_buffer.append(bytes('\b'))
-            logging.info('Erase Character (EC); "\\b" queued.')
+            logging.warning('Erase Character (EC) received; ignored.')
         elif cmd == EL:
-            logging.warning('Erase Line (EC) received; ignored.')
+            logging.warning('Erase Line (EL) received; ignored.')
         elif cmd == GA:
             logging.warning('Go Ahead (GA) received; ignored.')
         elif cmd == NOP:
@@ -393,8 +390,11 @@ class TelnetOptionParser(object):
             logging.warning('Break (BRK) received; ignored.')
         else:
             logging.error('_two_byte_cmd invalid: %r', cmd)
+
         self.telnet_got_iac = False
         self.telnet_got_cmd = None
+
+        return None
 
     def _three_byte_cmd(self, option) -> None:
         """
@@ -404,7 +404,7 @@ class TelnetOptionParser(object):
 
         logging.info('recv IAC %s %s', name_command(cmd), name_command(option))
 
-        # Incoming DO's and DONT's refer to the status of this end
+        # Incoming DO and DON'T refer to the status of this end
         if cmd == DO:
             self._handle_do(option)
         elif cmd == DONT:
@@ -414,7 +414,7 @@ class TelnetOptionParser(object):
         elif cmd == WONT:
             self._handle_wont(option)
         else:
-            logging.info('{client.addrport}: unhandled _three_byte_cmd: {opt}.'
+            logging.info('{client.addr_port}: unhandled _three_byte_cmd: {opt}.'
                          .format(client=self.__session, opt=name_command(option)))
 
         self.telnet_got_iac = False
@@ -469,7 +469,7 @@ class TelnetOptionParser(object):
         else:
             if self.check_local_option(option) is UNKNOWN:
                 self._note_local_option(option, False)
-                logging.info('{client.addrport}: unhandled do: {opt}.'
+                logging.info('{client.addr_port}: unhandled do: {opt}.'
                              .format(client=self.__session, opt=name_command(option)))
                 self._iac_wont(option)
 
@@ -523,7 +523,7 @@ class TelnetOptionParser(object):
             if self.check_remote_option(LINEMODE) is not False:
                 self._note_remote_option(LINEMODE, False)
         else:
-            logging.info('{client.addrport}: unhandled dont: {opt}.'
+            logging.info('{client.addr_port}: unhandled dont: {opt}.'
                          .format(client=self.__session, opt=name_command(option)))
 
     def _handle_will(self, option) -> None:
@@ -585,7 +585,7 @@ class TelnetOptionParser(object):
                 self._note_remote_option(TTYPE, True)
                 self.request_ttype()
         else:
-            logging.info('{client.addrport}: unhandled will: {opt} (ignored).'
+            logging.info('{client.addr_port}: unhandled will: {opt} (ignored).'
                          .format(client=self.__session, opt=name_command(option)))
 
     def _handle_wont(self, option) -> None:
@@ -625,7 +625,7 @@ class TelnetOptionParser(object):
             elif self.check_remote_option(option) in (True, UNKNOWN):
                 self._note_remote_option(option, False)
         else:
-            logging.info('{client.addrport}: unhandled wont: {opt}.'
+            logging.info('{client.addr_port}: unhandled wont: {opt}.'
                          .format(client=self.__session, opt=name_command(option)))
             self._note_remote_option(option, False)
 
@@ -644,18 +644,15 @@ class TelnetOptionParser(object):
                      if len(buf) > 1 and buf[1] is IS
                      else repr(collections.deque(itertools.islice(buf, 1, len(buf)))))
 
-        if 1 == len(buf) and buf[0] == bytes([0]):
+        if 1 == len(buf) and buf[0] == BINARY:
             logging.error('0nil SB')
             return
 
-        elif len(buf) < 2:
+        if len(buf) < 2:
             logging.error('SB too short')
             return
 
         if buf[0] in (TTYPE, XDISPLOC, NEW_ENVIRON, NAWS, STATUS):
-            logging.error('found SB SEQUENCE!!! ' + name_command(buf[0]))
-            logging.error('found SB SEQUENCE!!! ' + name_command(buf[1]))
-
             cmd = buf.popleft()
             opt = b''
 
@@ -664,27 +661,27 @@ class TelnetOptionParser(object):
                 opt = buf.popleft()
 
             if cmd == TTYPE and opt == IS:
-                logging.error('TTYPE')
+                # logging.error('TTYPE')
                 self._sb_ttype(buf)
 
             elif cmd == XDISPLOC and opt == IS:
-                logging.error('XDISPLOC')
+                # logging.error('XDISPLOC')
                 self._sb_xdisploc(buf)
 
             elif cmd == NEW_ENVIRON and opt == IS:
-                logging.error('NEW_ENVIRON')
+                # logging.error('NEW_ENVIRON')
                 self._sb_env(buf)
 
             elif cmd == NAWS:
-                logging.error('NAWS')
+                # logging.error('NAWS')
                 self._sb_naws(buf)
 
             elif cmd == STATUS and opt == SEND:
-                logging.error('STATUS')
+                # logging.error('STATUS')
                 self._send_status()
 
         else:
-            logging.error('unsupported subnegotiation, %s: %r', name_command(buf[0]), buf)
+            logging.error('unsupported sub negotiation, %s: %r', name_command(buf[0]), buf)
 
         self.telnet_sb_buffer.clear()
 
@@ -726,7 +723,7 @@ class TelnetOptionParser(object):
         Processes incoming sub-negotiation NEW_ENVIRON
         """
         breaks = list([idx for (idx, byte) in enumerate(bytestring)
-                       if byte in (bytes([0]), bytes([3]))])
+                       if byte in (BINARY, SGA)])
 
         for start, end in zip(breaks, breaks[1:]):
 
@@ -743,7 +740,7 @@ class TelnetOptionParser(object):
                 overwrite = (pair[0] == 'TERM'
                              and self.__session.env['TERM'] == self.__session.TTYPE_UNDETECTED)
 
-                if not pair[0] in self.__session.env or overwrite:
+                if pair[0] not in self.__session.env or overwrite:
                     logging.info('env[%r] = %r', pair[0], pair[1])
                     self.__session.env[pair[0]] = pair[1]
                 elif pair[1] == self.__session.env[pair[0]]:
@@ -753,14 +750,14 @@ class TelnetOptionParser(object):
                                     pair[0], self.__session.env[pair[0]], pair[1])
             else:
                 logging.error('client NEW_ENVIRON; invalid %r', pair)
-        self.env_REPLIED = True
+        self.env_replied = True
 
     def _sb_naws(self, charbuf) -> None:
         """
         Processes incoming subnegotiation NAWS
         """
         if 4 != len(charbuf):
-            logging.error('{client.addrport}: bad length in NAWS buf ({buflen})'
+            logging.error('{client.addr_port}: bad length in NAWS buf ({buflen})'
                           .format(client=self.__session, buflen=len(charbuf)))
             return
 
@@ -770,7 +767,7 @@ class TelnetOptionParser(object):
         old_columns = self.__session.env.get('COLUMNS', None)
 
         if old_rows == str(rows) and old_columns == str(columns):
-            logging.info('{client.addrport}: NAWS repeated'.format(client=self.__session))
+            logging.info('{client.addr_port}: NAWS repeated'.format(client=self.__session))
             return
 
         if rows <= 0:
@@ -783,10 +780,6 @@ class TelnetOptionParser(object):
 
         self.__session.env['LINES'] = str(rows)
         self.__session.env['COLUMNS'] = str(columns)
-
-        # TODO NAWS
-        if self.on_naws is not None:
-            self.on_naws(self)
 
     # ---[ State Juggling for Telnet Options ]----------------------------------
     def check_local_option(self, option):
@@ -867,19 +860,18 @@ class TelnetOptionParser(object):
         self.send_str(data=b''.join([IAC, WONT, option]))
 
 
-class TelnetNegotiation(object):
+class TelnetNegotiation:
+    """ Main Telnet Startup Class for Detection of Telnet Options """
+
+    #: maximum time elapsed allowed to begin on-connect negotiation
+    __time_negotiate = 2.50
     __option_parser = None
     __session = None
-    __logger = None
 
     def __init__(self, session_handle):
         """
         Accept new Telnet Connection and negotiate options.
         """
-
-        #: maximum time elapsed allowed to begin on-connect negotiation
-        self.TIME_NEGOTIATE = 2.50
-
         self.__option_parser = TelnetOptionParser(session_handle)
         self.__session = session_handle
 
@@ -907,32 +899,38 @@ class TelnetNegotiation(object):
         self.__option_parser.request_do_naws()
         self.__option_parser.request_do_env()
 
-        ''' Replace with asyn send '''
+        # Replace with asyn send
         # self.__option_parser.send()  # push
 
     def run_telnet_startup(self) -> None:
         """
         Negotiate and inquire about terminal type, telnet options, window size,
-        and tcp socket options before spawning a new session.
+        and tcp socket options before spawning a new session. Deadline Timer
+        Will timeout the negation process and continue on.
         """
         self.banner()
 
-        logging.info('timer: ' + str(self.TIME_NEGOTIATE))
+        logging.info('timer: {self.TIME_NEGOTIATE} ')
 
         # New Async Timer with Callback and Interval.
         timer = DeadLineTimer()
-        timer.async_timer(interval=self.TIME_NEGOTIATE, callback=self.__session.async_timeout_callback)
+        timer.async_timer(interval=self.__time_negotiate,
+                          callback=self.__session.async_timeout_callback)
 
-        logging.info('{client.addrport}: starting negotiation'.format(client=self.__session))
+        logging.info('{client.addr_port}: starting negotiation'.format(client=self.__session))
 
-    def to_bytes(self, bytes_or_str):
+    @staticmethod
+    def to_bytes(bytes_or_str):
+        """ Convert Byte or String to Bytes """
         if isinstance(bytes_or_str, str):
             value = bytes_or_str.encode()  # uses 'utf-8' for encoding
         else:
             value = bytes_or_str
         return value  # Instance of bytes
 
-    def to_str(self, bytes_or_str):
+    @staticmethod
+    def to_str(bytes_or_str):
+        """ Convert Byte or String to String """
         if isinstance(bytes_or_str, bytes):
             value = bytes_or_str.decode()  # uses 'utf-8' for encoding
         else:
@@ -940,6 +938,7 @@ class TelnetNegotiation(object):
         return value  # Instance of str
 
     def set_encoding(self) -> None:
+        """
         # set encoding to utf8 for clients negotiating BINARY mode and
         # not beginning with TERM 'ansi'.
         #
@@ -952,7 +951,8 @@ class TelnetNegotiation(object):
         # terminal emulating clients that are incapable of comprehending
         # "encoding" (Especially multi-byte!), they only decide upon a "font"
         # or "code page" to map char 0-255 to.
-        #
+        """
+
         self.__session.env['ENCODING'] = 'cp437'
         term = self.__session.env.get('TERM', '')
 

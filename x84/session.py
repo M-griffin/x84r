@@ -83,7 +83,7 @@ class ClientSession(object):
 
     #: terminal type identifier when not yet negotiated
     TTYPE_UNDETECTED = 'unknown'
-    addrport = None
+    addr_port = None
 
     def __new__(cls, connection):
         """
@@ -127,9 +127,9 @@ class ClientSession(object):
         self.connect_time = time.time()
         self.last_input_time = time.time()
 
-        self.addrport = connection.get_socket().get_peer_name()
+        self.addr_port = connection.get_socket().get_peer_name()
 
-        """ Srart the Telnet Banner Negotiation """
+        """ Start the Telnet Banner Negotiation """
         self.__telnet_startup.run_telnet_startup()
 
     def idle(self) -> float:
