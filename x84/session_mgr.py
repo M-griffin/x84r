@@ -3,10 +3,10 @@
 
 
 class SessionManager:
+    """ Session Manager Singleton Class. """
 
-    # Session Manager Singleton Class.
-    class __SessionManager:
-
+    class SessionSubManager:
+        """ Core Singleton Object for Global State Management """
         __session_list = []
 
         def __init__(self):
@@ -16,6 +16,7 @@ class SessionManager:
             return 'self' + self.val
 
         def add_session(self, session):
+            """ Add a Session to the Managed List """
             self.__session_list.append(session)
 
     instance = None
@@ -23,11 +24,11 @@ class SessionManager:
     # __new__ always a class method
     def __new__(cls):
         if not SessionManager.instance:
-            SessionManager.instance = SessionManager.__SessionManager()
+            SessionManager.instance = SessionManager.SessionSubManager()
         return SessionManager.instance
 
     def __getattr__(self, name):
         return getattr(self.instance, name)
 
-    def __setattr__(self, name) -> None:
-        return setattr(self.instance, name)
+    def __setattr__(self, name, value) -> None:
+        return setattr(self.instance, name, value)

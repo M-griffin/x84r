@@ -12,14 +12,10 @@ Michael Griffin
 
 # std imports
 import collections
-import traceback
-import array
 import logging
 import time
-import importlib
-import sys
-import os
-import asyncio
+
+from colors import color
 
 from x84.telnet import TelnetNegotiation, TelnetOptionParser
 
@@ -28,8 +24,6 @@ from x84.telnet import TelnetNegotiation, TelnetOptionParser
 # from x84.bbs.script_def import Script
 # from x84.bbs.userbase import User
 # from x84.bbs.ini import get_ini
-
-from colors import color
 
 MAX_READ_BYTES = 2 ** 16
 
@@ -56,7 +50,8 @@ def configure_logging():
     root.setLevel(logging.DEBUG)
 
 
-class ClientSession(object):
+# pylint: disable=too-many-instance-attributes
+class ClientSession:
     """
     Asynchronous client session unique per connection
     """
@@ -85,14 +80,14 @@ class ClientSession(object):
     TTYPE_UNDETECTED = 'unknown'
     addr_port = None
 
+    # pylint: disable=unused-argument
     def __new__(cls, connection):
         """
         Each Connection will have its own unique instance created
         :param connection:
         :return:
         """
-        inst = object.__new__(cls)
-        return inst
+        return object.__new__(cls)
 
     def __init__(self, connection):
         """
@@ -181,7 +176,9 @@ class ClientSession(object):
 
             # Data other than Telnet Options, then send back to client. or push through system!!
             if len(self.receive_buffer) > 0:
-                # TODO this should now be pushed through for input on the STATE.
+                # This should now be pushed through for
+                # Input on the STATE instead of echoed back!
+                logging.info("Echo %s", self.receive_buffer)
                 self.async_write(b''.join(self.receive_buffer))
 
             # Ready for next set of incoming data
@@ -206,8 +203,8 @@ class ClientSession(object):
             logging.info('async_write: disconnected')
             self.close()
         # elif self.__is_active:
-            # Data was writen to socket.  just handle errors if any.
-            # logging.info('async_write: OK')
+        # Data was writen to socket.  just handle errors if any.
+        # logging.info('async_write: OK')
 
     def close(self) -> None:
         """ Close and shutdown sockets and connection """
@@ -224,6 +221,13 @@ class ClientSession(object):
         """ If Terminal Negotiation is still in progress """
         return self.__is_detection_completed
 
+    def format_byte_string(self, value, encoding, use_newline) -> bytes:
+        """ Quick Formatting, more from Common IO """
+
+        val = use_newline or b'\r\n'
+        str_detect = b'%s' % bytes([value, val], encoding=encoding)
+        return str_detect
+
     def async_timeout_callback(self) -> None:
         """
         Callback for Async Telnet Negotiation Timeout
@@ -235,14 +239,19 @@ class ClientSession(object):
 
         # Pull final encoding detected into session
         self.__telnet_startup.set_encoding()
-        self.async_write(bytes(color('Terminal Detection Completed.\r\n', fg='blue', style='bold'), encoding=encoding))
+        self.async_write(bytes(color(
+            'Terminal Detection Completed.\r\n', fg='blue', style='bold'), encoding=encoding))
 
         self.__is_detection_completed = True
 
         # Print out initial detection
-        str_detect = b'\r\nterm     : %b \r\n' % bytes(self.env.get('TERM', None), encoding=encoding) + \
-                     b'encoding : %b \r\n' % bytes(self.env.get('ENCODING', None), encoding=encoding) + \
-                     b'lines    : %b \r\n' % bytes(self.env.get('LINES', None), encoding=encoding) + \
-                     b'cols     : %b \r\n' % bytes(self.env.get('COLUMNS', None), encoding=encoding)
-
+        str_detect = b'\r\n'
+        str_detect += b'term     : %s \r\n' \
+                      % bytes(self.env.get('TERM', None), encoding=encoding)
+        str_detect += b'encoding : %s \r\n' \
+                      % bytes(self.env.get('ENCODING', None), encoding=encoding)
+        str_detect += b'lines    : %s \r\n' \
+                      % bytes(self.env.get('LINES', None), encoding=encoding)
+        str_detect += b'cols     : %s \r\n\r\n' \
+                      % bytes(self.env.get('COLUMNS', None), encoding=encoding)
         self.async_write(str_detect)

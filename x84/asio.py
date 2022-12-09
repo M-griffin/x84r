@@ -25,7 +25,6 @@ import collections
 import errno
 import functools
 import logging
-
 import select
 import socket
 

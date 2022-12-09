@@ -21,28 +21,19 @@ __credits__ = [
 __license__ = 'N/A'
 
 import logging
-import subprocess
-# import sys
-# import os
 
 from x84 import asio
 from x84 import session
+
 # from x84 import session_mgr
 
 MAX_READ_BYTES = 2 ** 16
 
-
-class TTSHandler(logging.Handler):
-    """
-    Only Available in Posix it seems !!  Audible speaking logs!
-    """
-    def emit(self, record):
-        msg = self.format(record)
-        # Speak slowly in a female English voice
-        cmd = ['espeak', '-s150', '-ven+f3', msg]
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        # wait for the program to finish
-        process.communicate()
+# PyLint for some Legacy Python 2 Stuff for Refactoring
+"""
+    # pylint: disable=consider-using-f-string
+    # pylint: disable=logging-not-lazy
+"""
 
 
 def configure_logging():
@@ -50,21 +41,25 @@ def configure_logging():
     Initial Logging Setup, work this into individual sessions logging in the future too.
     :return:
     """
-    # console_handler = TTSHandler()
+
     root = logging.getLogger(__name__)
     root.setLevel(logging.INFO)
 
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s[%(levelname)s]: %(message)s')
+    # formatter = logging.Formatter('%(asctime)s - %(name)s[%(levelname)s]: %(message)s')
+    # logging.basicConfig(format="{processName:<12} {message} ({filename}:{lineno})", style="{")
+    formatter = logging.Formatter(
+        "{asctime} - {processName:<12} [{levelname}]: {message} ({filename}:{lineno})", style="{")
+
     console_handler.setFormatter(formatter)
     root.addHandler(console_handler)
 
+    # Reset the Root Logger Now.
     root = logging.getLogger()
     root.addHandler(console_handler)
-    # the default formatter just returns the message
-    root.setLevel(logging.DEBUG)
+    root.setLevel(logging.INFO)
 
 
 class Connection:
@@ -73,18 +68,18 @@ class Connection:
     This gets attached to each new Session Instance
     """
 
-    def __init__(self, io_service, client_socket):
+    def __init__(self, client_socket):
         """
         Startup
-        :param io_service:
         :param client_socket:
         """
-        self.__io_service = io_service
+        # pylint: disable=unused-private-member
         self.__data_from_client = ''
         self.__writing_to_client = False
         self.__client_socket = client_socket
-        self.__client_hostname_string = ("{peer} -> {name}".format(peer=self.__client_socket.get_peer_name(),
-                                                                   name=self.__client_socket.get_socket_name()))
+        self.__client_hostname_string = ("%s -> %s",
+                                         self.__client_socket.get_peer_name(),
+                                         self.__client_socket.get_socket_name())
 
     def close(self) -> None:
         """
@@ -94,15 +89,17 @@ class Connection:
         if not self.__writing_to_client:
             if ((not self.__client_socket.closed()) and
                     (len(self.__client_hostname_string) > 0)):
-                logging.info("disconnect %s" % self.__client_hostname_string)
+                logging.info('disconnect %s', self.__client_hostname_string)
 
             self.__client_socket.close()
 
     def get_socket(self) -> object:
+        """ Retrieve Socket handle """
         return self.__client_socket
 
 
-class Acceptor(object):
+# pylint: disable=too-few-public-methods
+class Acceptor:
     """
     Async Connection Handler, Spawn new Session Instances
     Attached the Async Connection object to the session on incoming connections
@@ -111,13 +108,13 @@ class Acceptor(object):
     def __init__(self, io_service, local_address, local_port):
 
         self.__io_service = io_service
-        self.__async_socket = io_service.create_async_socket()
+        self.__async_socket = self.__io_service.create_async_socket()
         self.__async_socket.set_reuse_address()
         self.__async_socket.bind((local_address, local_port))
         self.__async_socket.listen()
         self.__async_socket.async_accept(self.__accept_callback)
 
-        logging.info("listening for Telnet on %s" % str(self.__async_socket.get_socket_name()))
+        logging.info('listening for Telnet on %s', self.__async_socket.get_socket_name())
 
     def __accept_callback(self, sock, err) -> None:
         """
@@ -127,11 +124,11 @@ class Acceptor(object):
         :return:
         """
         if err == 0 and sock is not None:
-            logging.info('accept %s -> %s' % (sock.get_peer_name(), sock.get_socket_name()))
+            logging.info('accept %s -> %s', sock.get_peer_name(), sock.get_socket_name())
 
-            ''' Spawn new session instance passing ioService for socket call backs.'''
+            # Spawn new session instance passing ioService for socket call backs.
             logging.info("creating session")
-            new_session = session.ClientSession(connection=Connection(self.__io_service, sock))
+            new_session = session.ClientSession(connection=Connection(sock))
 
             logging.info("start_up_async_session")
             new_session.wait_for_async_data()
@@ -157,14 +154,17 @@ def main() -> int:
 
     # Setup Async IO_Service for handling connections
     io_service = asio.create_async_io_service()
-    logging.info('io_service = ' + str(io_service))
+
+    # logging.info('io_service = ' + str(io_service))
+    logging.info('io_service = %s', io_service)
 
     # Setup Acceptor to listen for new telnet connections and spawn sessions '''
-    # Using 127.0.0.1 will only allow local host connection, using 0.0.0.0 open up to external connections.
+    # Using 127.0.0.1 will only allow local host connection,
+    # using 0.0.0.0 open up to external connections.
     # Acceptor(io_service, local_address='127.0.0.1', local_port=6023)
     Acceptor(io_service, local_address='0.0.0.0', local_port=6023)
 
-    logging.info('starting service = ' + str(io_service))
+    logging.info('starting service = %s', io_service)
     io_service.run()
 
     logging.info('shutdown complete')
